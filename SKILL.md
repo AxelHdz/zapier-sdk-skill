@@ -2,24 +2,26 @@
 name: zapier-sdk
 description: >
   Gives agent skills a general-purpose operating model for using the Zapier SDK
-  CLI and JavaScript SDK to discover connections, preview actions, execute
-  safe automations, and log outcomes across connected apps.
+  CLI and JavaScript SDK to discover connections, preview actions, execute safe
+  automations, log outcomes across connected apps, and embed Zapier-backed
+  features inside application backends.
 
   Use this skill whenever the user mentions Zapier, connected apps, inbox
   processing, lead routing, support triage, follow-up workflows, CRM hygiene,
-  scheduling, internal notifications, spreadsheet work, or any request that
-  benefits from acting across multiple tools.
+  scheduling, internal notifications, spreadsheet work, building a Zapier-backed
+  product feature, or any request that benefits from acting across multiple
+  tools.
 ---
 
 # Zapier SDK Skill
 
-Act on the user's behalf across Zapier-connected apps while keeping previews,
-approval, dedupe, and task visibility first-class.
-
-Track operational state in a persistent `.zapier-sdk-data/` directory.
+Operate across Zapier-connected apps safely, and help integrators embed Zapier
+inside their own application backends. Keep previews, approval, dedupe, task
+visibility, and schema verification first-class in every mode.
 
 For CLI command syntax, see [references/cli-reference.md](references/cli-reference.md).
 For reusable automation patterns, see [references/sdk-automation-reference.md](references/sdk-automation-reference.md).
+For embedding Zapier inside an application backend, see [references/product-integration-reference.md](references/product-integration-reference.md).
 
 ---
 
@@ -139,11 +141,13 @@ If a `run-action` call fails with a connection or auth error:
 
 ## Mode Selection
 
-Decide the mode before doing anything else.
+Decide the mode before doing anything else. The three modes differ in **who runs
+the code**, **where credentials live**, and **how long the work is expected to
+last** — not just in how many steps are involved.
 
-### One-off task
+### Operator Mode — act now through Zapier
 
-Use this when the user wants a single thing done now:
+Use this when the user wants a single thing done on their behalf, right now:
 
 - check inboxes
 - search a record
@@ -151,21 +155,68 @@ Use this when the user wants a single thing done now:
 - create a calendar hold
 - update a sheet row
 
-Use CLI commands from [references/cli-reference.md](references/cli-reference.md).
+Credentials come from interactive `npx zapier-sdk login`; state lives in
+`.zapier-sdk-data/`. Use CLI commands from [references/cli-reference.md](references/cli-reference.md).
 
-### Reusable automation
+### Automation Mode — build a reusable workflow runner
 
-Use this when the user wants code, a workflow, or a repeatable process:
+Use this when the user wants code, a workflow, or a repeatable process that
+they will trigger on demand or on a schedule:
 
-- “build an automation”
-- “create a workflow”
-- “automate X with Zapier”
-- “I need this to run repeatedly”
-- “set up a pipeline”
-- “use the Zapier SDK”
-- any multi-step cross-app request
+- "build an automation"
+- "create a workflow"
+- "automate X with Zapier"
+- "I need this to run repeatedly"
+- "set up a pipeline"
+- any multi-step cross-app request that's still scoped to the user's own
+  environment
 
 Before acting in this mode, read [references/sdk-automation-reference.md](references/sdk-automation-reference.md).
+
+### Product Integration Mode — embed Zapier in an application backend
+
+Use this when the user is building a feature of their own product that calls
+Zapier at runtime. Typical signals:
+
+- "add a form submission endpoint that writes to our Sheet"
+- "our Next.js app needs to send a confirmation via Gmail / Outlook"
+- "deploy a backend that runs Zapier actions in response to API requests"
+- "set up Zapier inside my server / serverless function / API route"
+- anything where Zapier is a **runtime dependency of a deployed app**, not a
+  script the user runs locally or a workflow they manage in the Zapier UI
+
+This mode is materially different from the other two:
+
+- authentication uses **named client credentials** (not interactive `login`)
+- credentials and resolved connection / resource IDs live in the app's **env
+  var system**, not in `.zapier-sdk-data/`
+- the code runs in production (CI, preview, prod) on behalf of a service
+  account, not on the user's laptop on behalf of the user
+- dynamic field schemas (Sheets columns, Airtable bases, CRM custom fields)
+  must be inspected **at build time**, not assumed at runtime
+
+Before acting in this mode, read [references/product-integration-reference.md](references/product-integration-reference.md).
+It covers bootstrap, secrets, connection-ID resolution, env sync across
+preview/prod, deployment, and the known dynamic-field footguns.
+
+---
+
+## Runtime Boundary
+
+The skill uses several kinds of persistent state. Keep them separate — especially
+in Product Integration Mode, where mixing them causes real bugs.
+
+| State | Scope | Lifetime | Ship to production? |
+|---|---|---|---|
+| `.zapier-sdk-data/` (connections, task-usage, action-log, apps/) | Local agent workspace | Session / ongoing project work | **No.** This is a local discovery and bookkeeping cache. Never commit secrets from it; never treat it as a runtime dependency. |
+| `ZAPIER_CREDENTIALS_CLIENT_ID` / `_CLIENT_SECRET` | App env | Long-lived (rotate on compromise) | **Yes.** Set in every environment the app runs in — local, CI, preview, prod. |
+| Resolved connection IDs and resource IDs (spreadsheet ID, calendar ID, Airtable base, etc.) | App env or app database | Stable across requests | **Yes.** Resolve once at setup time, persist, and reuse — do not re-discover on every request. |
+| Direct non-Zapier provider config (SMTP URL, custom webhook secrets, etc.) | App env | As the app requires | **Yes.** Some concerns are a poor fit for Zapier actions (e.g. branded transactional email from a custom domain, low-latency event streams). Direct provider integrations remain a valid option — use them where they produce a cleaner architecture, not as a reflex. |
+
+In **Operator** and **Automation** modes, `.zapier-sdk-data/` is the source of
+truth. In **Product Integration** mode, `.zapier-sdk-data/` is a local
+discovery aid only — the runtime source of truth is env and (if needed) the
+app's database.
 
 ---
 
