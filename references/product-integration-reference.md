@@ -107,6 +107,10 @@ single warm instance). Do not create a new client for every action call.
 
 ## 3. Connection and resource ID resolution
 
+For provider-specific notes on which IDs to resolve (Calendar's `calendarid`,
+Airtable's base + table, CRM custom-property maps), see
+[provider-lookup.md](provider-lookup.md).
+
 Every action call requires a `connectionId`. Connection IDs are **stable** — a
 given Zapier connection keeps its ID across requests. That means:
 
@@ -260,9 +264,17 @@ export const createSheetsLeadSink = (): LeadSink => ({
 Your route handler only sees `LeadSink`. The Zapier call is one replaceable
 edge.
 
+For a worked end-to-end example that wires this adapter into a route handler,
+health check, and env-boot assertions in one file, see
+[examples/nextjs-form-to-sheets.ts](examples/nextjs-form-to-sheets.ts).
+
 ---
 
 ## 5. Dynamic fields — inspect, don't guess
+
+For provider-specific notes (Airtable's per-table schema, CRM custom-property
+discovery, Calendar's double-dated input fields), see
+[provider-lookup.md](provider-lookup.md).
 
 The highest-impact Product Integration footgun: **Google Sheets, Airtable,
 Notion databases, and CRMs with custom properties do not have static field
