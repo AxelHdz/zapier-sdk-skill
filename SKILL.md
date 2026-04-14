@@ -21,7 +21,9 @@ visibility, and schema verification first-class in every mode.
 
 For CLI command syntax, see [references/cli-reference.md](references/cli-reference.md).
 For reusable automation patterns, see [references/sdk-automation-reference.md](references/sdk-automation-reference.md).
-For embedding Zapier inside an application backend, see [references/product-integration-reference.md](references/product-integration-reference.md).
+For embedding Zapier inside an application backend, see [references/product-integration-reference.md](references/product-integration-reference.md)
+and the worked example in [references/examples/nextjs-form-to-sheets/README.md](references/examples/nextjs-form-to-sheets/README.md).
+For provider-specific lookup details (Calendar, Airtable, CRMs, direct providers), see [references/provider-lookup.md](references/provider-lookup.md).
 
 ---
 
