@@ -51,10 +51,10 @@ function createSheetsLeadSink(): LeadSink {
     async writeLead(lead) {
       try {
         await zapier.runAction({
-          appKey: "google-sheets",
+          app: "google-sheets",
           actionType: "write",
-          actionKey: "add_row",
-          connectionId: SHEETS_CONNECTION_ID,
+          action: "add_row",
+          connection: SHEETS_CONNECTION_ID,
           inputs: {
             spreadsheet: LEAD_SPREADSHEET_ID,
             worksheet: LEAD_WORKSHEET_ID,
@@ -67,9 +67,9 @@ function createSheetsLeadSink(): LeadSink {
       } catch (err) {
         console.error("[leads] sheets write failed", {
           ts: new Date().toISOString(),
-          appKey: "google-sheets",
-          actionKey: "add_row",
-          connectionId: SHEETS_CONNECTION_ID,
+          app: "google-sheets",
+          action: "add_row",
+          connection: SHEETS_CONNECTION_ID,
           error: err instanceof Error ? err.message : String(err),
         });
         return { ok: false, reason: "sheets_write_failed" };
@@ -82,9 +82,9 @@ function createSheetsLeadSink(): LeadSink {
     async healthCheck() {
       try {
         const { data } = await zapier.listConnections({
-          appKey: "google-sheets",
+          app: "google-sheets",
           owner: "me",
-          connectionIds: [String(SHEETS_CONNECTION_ID)],
+          connections: [String(SHEETS_CONNECTION_ID)],
           isExpired: false,
         });
         const found =

@@ -1,4 +1,4 @@
-import { leadSink, parseLead } from "../../../lib/leads-adapter";
+import { leadSink, parseLead } from "../../../lib/leads-adapter.js";
 
 function json(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
