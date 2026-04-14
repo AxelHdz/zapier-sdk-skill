@@ -264,9 +264,9 @@ export const createSheetsLeadSink = (): LeadSink => ({
 Your route handler only sees `LeadSink`. The Zapier call is one replaceable
 edge.
 
-For a worked end-to-end example that wires this adapter into a route handler,
-health check, and env-boot assertions in one file, see
-[examples/nextjs-form-to-sheets.ts](examples/nextjs-form-to-sheets.ts).
+For a worked end-to-end example that wires this adapter into route handlers,
+a health check, env-boot assertions, and bootstrap guidance, see
+[examples/nextjs-form-to-sheets/README.md](examples/nextjs-form-to-sheets/README.md).
 
 ---
 
