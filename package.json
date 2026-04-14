@@ -1,0 +1,29 @@
+{
+  "name": "zapier-sdk-skill",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A general-purpose agent skill and typed workflow framework for building safe Zapier-powered automations.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "example:lead-routing": "tsx src/demo.ts lead-routing fixtures/lead-routing/new-enterprise-lead.json --dry-run",
+    "example:support-triage": "tsx src/demo.ts support-triage fixtures/support-triage/customer-escalation.json --approve-writes"
+  },
+  "keywords": [
+    "zapier",
+    "automation",
+    "agent-skill",
+    "typescript",
+    "workflow"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

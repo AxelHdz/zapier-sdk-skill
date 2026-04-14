@@ -1,0 +1,8 @@
+{
+  "ticketId": "ticket-77",
+  "customerName": "Drew Alvarez",
+  "customerTier": "enterprise",
+  "severity": "high",
+  "issueSummary": "Salesforce handoff is missing account ownership metadata",
+  "existingTicketIds": []
+}

@@ -1,0 +1,6 @@
+.zapier-sdk-data/
+node_modules/
+.DS_Store
+dist/
+coverage/
+zapier-sdk-skill

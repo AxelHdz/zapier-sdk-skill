@@ -1,0 +1,13 @@
+{
+  "leadId": "lead-1001",
+  "source": "demo-request",
+  "fullName": "Maya Patel",
+  "email": "maya.patel@example.com",
+  "company": "Northwind Logistics",
+  "region": "amer",
+  "segment": "enterprise",
+  "interestArea": "lead routing",
+  "existingLeadKeys": [
+    "lead-1001"
+  ]
+}
