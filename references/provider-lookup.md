@@ -17,8 +17,7 @@ answer "how does this specifically apply to <provider>?"
 
 ## Google Calendar
 
-- **appKey**: `"google-calendar"` (hyphen in strings, underscore in app-proxy
-  accessors: `zapier.apps.google_calendar`)
+- **App slug**: `"google-calendar"` (use as the `app` field in SDK calls; underscore form `zapier.apps.google_calendar` for the app-proxy accessor)
 - **Resource ID to resolve**: the calendar's `calendarid`. Use the literal
   string `"primary"` for the signed-in account's default calendar; use a
   Google-provided email-like ID (e.g. `team@company.com`) for shared
@@ -44,7 +43,7 @@ answer "how does this specifically apply to <provider>?"
 
 ## Airtable
 
-- **appKey**: `"airtable"` (proxy: `zapier.apps.airtable`)
+- **App slug**: `"airtable"` (use as the `app` field; proxy accessor: `zapier.apps.airtable`)
 - **Resource IDs to resolve**: the `base` ID (Airtable "base" = workspace)
   **and** the `table` ID or name. Both are required for every read/write
   action — neither is optional.
@@ -72,7 +71,7 @@ answer "how does this specifically apply to <provider>?"
 
 ## CRMs with custom fields (HubSpot, Salesforce, Pipedrive)
 
-- **appKeys**: `"hubspot"`, `"salesforce"`, `"pipedrive"` (and others).
+- **App slugs**: `"hubspot"`, `"salesforce"`, `"pipedrive"` (and others) — use as the `app` field in SDK calls.
 - **Resource IDs to resolve**: none at the "connection" level — CRM
   connections typically represent the whole account. What varies per tenant
   is the **custom-property schema**.
@@ -92,10 +91,10 @@ answer "how does this specifically apply to <provider>?"
 
   ```ts
   const { data: fields } = await zapier.listInputFields({
-    appKey: "hubspot",
+    app: "hubspot",
     actionType: "write",
-    actionKey: "create_contact",
-    connectionId: tenant.zapier.hubspotConnectionId,
+    action: "create_contact",
+    connection: tenant.zapier.hubspotConnectionId,
   });
   ```
 

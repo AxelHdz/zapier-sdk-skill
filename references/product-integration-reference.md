@@ -111,7 +111,7 @@ For provider-specific notes on which IDs to resolve (Calendar's `calendarid`,
 Airtable's base + table, CRM custom-property maps), see
 [provider-lookup.md](provider-lookup.md).
 
-Every action call requires a `connectionId`. Connection IDs are **stable** — a
+Every action call requires a `connection` (the connection ID). Connection IDs are **stable** — a
 given Zapier connection keeps its ID across requests. That means:
 
 - Resolve each app's connection ID **once**, at setup time.
@@ -123,7 +123,7 @@ given Zapier connection keeps its ID across requests. That means:
 
 ```ts
 const { data: slackConnection } = await zapier.findFirstConnection({
-  appKey: "slack",
+  app: "slack",
   owner: "me",
   isExpired: false,
 });
@@ -206,10 +206,10 @@ changes the tenant's integration config.
 ```ts
 export async function writeLeadRow(lead: Lead) {
   const { data } = await zapier.runAction({
-    appKey: "google-sheets",
+    app: "google-sheets",
     actionType: "write",
-    actionKey: "add_row",
-    connectionId: Number(process.env.GOOGLE_SHEETS_CONNECTION_ID),
+    action: "add_row",
+    connection: Number(process.env.GOOGLE_SHEETS_CONNECTION_ID),
     inputs: {
       spreadsheet: process.env.LEAD_SHEET_SPREADSHEET_ID!,
       worksheet: process.env.LEAD_SHEET_WORKSHEET_ID!,
@@ -223,8 +223,7 @@ export async function writeLeadRow(lead: Lead) {
 }
 ```
 
-Note the exact parameter names: **`appKey`**, **`actionType`**, **`actionKey`**,
-**`connectionId`**, **`inputs`**. These are the current SDK field names.
+Note the exact parameter names: **`app`** (the app slug, e.g. `"google-sheets"`), **`actionType`**, **`action`** (the action key, e.g. `"add_row"`), **`connection`** (the resolved numeric or string connection ID), **`inputs`**. These are the canonical SDK field names in the current `@zapier/zapier-sdk`. The aliases `appKey`/`actionKey`/`connectionId` are still accepted but are marked `@deprecated` in the SDK types — prefer the canonical names so editor warnings stay clean and your code keeps compiling if Zapier removes the aliases.
 
 ---
 
@@ -244,10 +243,10 @@ export interface LeadSink {
 export const createSheetsLeadSink = (): LeadSink => ({
   async writeLeadRow(lead) {
     const { data } = await zapier.runAction({
-      appKey: "google-sheets",
+      app: "google-sheets",
       actionType: "write",
-      actionKey: "add_row",
-      connectionId: Number(process.env.GOOGLE_SHEETS_CONNECTION_ID),
+      action: "add_row",
+      connection: Number(process.env.GOOGLE_SHEETS_CONNECTION_ID),
       inputs: {
         spreadsheet: process.env.LEAD_SHEET_SPREADSHEET_ID!,
         worksheet: process.env.LEAD_SHEET_WORKSHEET_ID!,
@@ -397,7 +396,7 @@ interactive CLI session.
   Mode does not relax it.
 - **"Always produce a run summary"**: implement this as structured logging at
   runtime. Each action call should emit a log line with timestamp, tenant,
-  appKey, actionType, actionKey, connection ID, dedupe key, and outcome.
+  app, actionType, action, connection ID, dedupe key, and outcome.
 - **"Track task usage defensively and warn at 75%/90%"**: make this a
   monitoring concern. Export task usage to your metrics system and alert on
   those thresholds there; interactive warnings do not apply when the request is
