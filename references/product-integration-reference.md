@@ -146,8 +146,15 @@ GMAIL_CONNECTION_ID=54321
 ### Resource IDs
 
 Resources nested inside a connection — spreadsheet IDs, worksheet IDs,
-calendar IDs, Airtable base IDs — are also stable and also belong in env, not
-hardcoded strings buried in route handlers:
+calendar IDs, Airtable base IDs — are also stable. Resolve them once per
+tenant, persist them, and reuse them on every request. The difference between
+single-tenant and multi-tenant apps is **where** they live, not **how often**
+they change.
+
+#### Single-tenant
+
+For a single-tenant app, resource IDs belong in env, not hardcoded strings
+buried in route handlers:
 
 ```
 LEAD_SHEET_SPREADSHEET_ID=1abc...
@@ -158,6 +165,37 @@ BOOKING_CALENDAR_ID=primary
 Resolve these via a one-time bootstrap script (often using
 `list-input-field-choices` in the CLI) and document them in a README or ADR so
 the next person who touches the code knows where they came from.
+
+#### Multi-tenant
+
+For a multi-tenant app, keep the same "resolve once, persist, reuse" rule, but
+store each tenant's connection ID and resource IDs together in your app
+database:
+
+```ts
+type TenantRecord = {
+  tenantId: string;
+  zapier: {
+    sheetsConnectionId: number;
+    spreadsheetId: string;
+    worksheetId: string;
+    // Per-tenant field keys come into play in §5.
+  };
+};
+
+async function getTenantRecord(tenantId: string): Promise<TenantRecord> {
+  const tenant = await loadTenantConfigFromDb(tenantId); // pseudo-DB fetch
+  if (!tenant?.zapier) {
+    throw new Error(`Missing Zapier config for tenant ${tenantId}`);
+  }
+  return tenant;
+}
+```
+
+That tenant row becomes the runtime source of truth. Do not re-discover the
+spreadsheet, worksheet, or calendar on each request; resolve them once during
+tenant setup, persist them, and reuse them until an operator intentionally
+changes the tenant's integration config.
 
 ### Hot path — runtime action call
 
@@ -224,7 +262,7 @@ edge.
 
 ---
 
-## 5. Dynamic fields — inspect at build time
+## 5. Dynamic fields — inspect, don't guess
 
 The highest-impact Product Integration footgun: **Google Sheets, Airtable,
 Notion databases, and CRMs with custom properties do not have static field
@@ -245,9 +283,47 @@ Read the `key` values from the returned schema and use those exact strings in
 your adapter's `inputs` object. If the target worksheet's columns change, the
 schema changes — re-run the discovery command and update your adapter.
 
-Treat this as a build-time concern, not a runtime concern: do not try to
-resolve field keys dynamically on every request. Instead, pin them in the
-adapter and add a smoke test (see §7) that fails loudly when the schema drifts.
+### Single-tenant — resolve once at build/bootstrap time
+
+Treat this as a build-time concern for single-tenant apps, not a runtime
+concern: do not try to resolve field keys dynamically on every request.
+Instead, resolve the schema once at build/bootstrap time, pin the field keys in
+the adapter, and add a smoke test (see §8) that fails loudly when the schema
+drifts.
+
+### Multi-tenant — resolve at tenant onboarding time
+
+In a multi-tenant app, each tenant's worksheet, base, or CRM can expose a
+different schema. Resolve the field keys at **tenant onboarding time** using
+that tenant's own connection ID and resource IDs, then persist the resulting
+map alongside the rest of the tenant's Zapier config from §3.
+
+```ts
+type TenantRecord = {
+  tenantId: string;
+  zapier: {
+    sheetsConnectionId: number;
+    spreadsheetId: string;
+    worksheetId: string;
+    fieldKeys: {
+      name: string;
+      email: string;
+      source: string;
+    };
+  };
+};
+
+const tenant = await getTenantRecord(tenantId); // pseudo-DB fetch
+```
+
+Re-resolve those keys only on an explicit tenant re-sync action — an admin
+button, support tool, or scheduled validation job — never on the hot request
+path.
+
+Schema drift detection applies in both cases: use CI smoke tests for
+single-tenant integrations, and use a background job for multi-tenant
+integrations that re-fetches schema and flags tenants whose stored field-key
+map has diverged.
 
 ---
 
@@ -286,7 +362,49 @@ persist in env, verify before deploy** — applies to every platform.
 
 ---
 
-## 7. Verification — health and smoke checks
+## 7. Safety rules in Product Integration Mode
+
+Product Integration Mode keeps the safety intent from [SKILL.md](../SKILL.md),
+but it maps those rules onto runtime product traffic differently than an
+interactive CLI session.
+
+- **"Explicit user approval before any write"**: satisfy this at author time
+  with code review of write shapes, field mappings, dedupe keys, adapter tests,
+  and preview-env smoke tests, and at end-user action time when the user's form
+  submission, button click, or API call is the approval for the write it
+  triggers. Per-request out-of-band confirmation is not required for
+  user-initiated writes.
+- **"Never send messages without showing the draft and getting approval"**:
+  for user-initiated transactional messages such as confirmation emails,
+  receipts, and password resets, the triggering user action is the approval.
+  For unattended, bulk, or broadcast sends such as marketing blasts, scheduled
+  digests, or admin-initiated notifications to other users, keep a stronger
+  gate such as manual admin review, a preview or dry-run toggle, or a rate
+  limiter.
+- **"Never delete records"**: this still applies verbatim. Product Integration
+  Mode does not relax it.
+- **"Always produce a run summary"**: implement this as structured logging at
+  runtime. Each action call should emit a log line with timestamp, tenant,
+  appKey, actionType, actionKey, connection ID, dedupe key, and outcome.
+- **"Track task usage defensively and warn at 75%/90%"**: make this a
+  monitoring concern. Export task usage to your metrics system and alert on
+  those thresholds there; interactive warnings do not apply when the request is
+  an HTTP call from an end user.
+
+High-risk operations still need extra guards. "User action = approval" does
+not hold for:
+
+- writes that affect users other than the one who triggered the request
+- bulk writes beyond an explicit threshold
+- writes to destructive or hard-to-reverse endpoints
+- anything a product-security review would flag
+
+Use a stronger gate there: manual review, preview/dry-run, rate limits,
+approval workflows, or other controls appropriate to the blast radius.
+
+---
+
+## 8. Verification — health and smoke checks
 
 Ship these alongside the feature. They catch 90% of Product Integration Mode
 regressions before they become production incidents.
@@ -326,17 +444,16 @@ against a throwaway resource (a "smoke-test" row in the target sheet,
 a test channel in the target Slack workspace). This is the fastest way to
 catch schema drift after a dynamic-field change.
 
-### Degrade gracefully — don't disable safety
+### Degrade gracefully
 
 If an optional integration fails at runtime (e.g. the lead sink is down), the
-feature should degrade — queue the work, return a warning, surface a manual
-path — **not** bypass trust-boundary checks or skip approval gates elsewhere
-in the request. Safety rails from [SKILL.md](../SKILL.md) still apply in
-Product Integration Mode.
+feature should degrade gracefully — queue the work, retry safely, return a
+warning, or surface a manual fallback path — instead of crashing the request or
+silently dropping the work.
 
 ---
 
-## 8. Known footguns
+## 9. Known footguns
 
 Short list of mistakes this mode tends to produce. Check your implementation
 against each one before shipping.
