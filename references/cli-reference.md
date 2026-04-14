@@ -25,7 +25,7 @@ App keys use hyphens in CLI (`google-calendar`) and underscores in SDK code
 
 ## Discovery
 
-**Always discover action keys before using an unfamiliar app. Do not guess.**
+**Always discover action keys and input fields before using an unfamiliar app. Do not guess.**
 
 ```bash
 # Search for apps by name
@@ -45,6 +45,32 @@ npx zapier-sdk list-input-field-choices <app-key> <action-type> <action-key> <fi
   --connection-id <ID> --json
 ```
 
+### Dynamic fields
+
+For some apps the input schema is not static — the field keys depend on the specific
+resource the action is targeting. The most common offenders:
+
+- **Google Sheets** — `add_row`, `update_row`, and `lookup_row` expose one field per column
+  in the target worksheet. Field keys are generated per worksheet and can look like
+  `COL$A`, `name`, or a hashed token. **Never assume `data_0`, `data_1`, etc.**
+- **Airtable / Notion databases** — field keys and types depend on the base or database
+  schema.
+- **CRMs with custom properties** — HubSpot, Salesforce, Pipedrive all expose custom
+  fields per account.
+
+For these, pass `--connection-id` and (where applicable) the resource identifier when
+fetching the schema so the CLI returns the actual dynamic fields:
+
+```bash
+npx zapier-sdk get-input-fields-schema google-sheets write add_row \
+  --connection-id <ID> \
+  --inputs '{"spreadsheet":"<SPREADSHEET_ID>","worksheet":"<SHEET_ID>"}' \
+  --json
+```
+
+Read the returned `key` values from the schema and use those exact keys when constructing
+the `--inputs` payload for `run-action`.
+
 ## Running Actions
 
 ```bash
@@ -60,15 +86,28 @@ npx zapier-sdk run-action <app-key> <action-type> <action-key> \
 - **search** — find specific records (email by query, event by date)
 - **write** — create or update (send email, create event, add row)
 
-## Preview and dedupe checklist
+## Verify before write
 
-Before executing a write:
+Before executing a write action, confirm **both** the approval flow and the schema.
+
+**Approval:**
 
 - show the user what will be created or updated
 - confirm the exact target app and action
 - prefer drafts over sends when messaging is involved
 - search first if duplicate records are possible
 - use a dedupe key for repeated workflows
+
+**Schema:**
+
+- run `get-input-fields-schema` with the target `--connection-id` (and resource identifier
+  when relevant) and use the exact `key` values returned by the CLI
+- do not assume field names like `data_0`, `data_1`, `lookup_column`, or `row_id` —
+  these vary per app and sometimes per resource
+- for update/upsert actions, verify the key field (row id, record id, lookup column)
+  from the schema rather than guessing its name
+- if a write fails with "unknown field" or a silently-mismapped column, re-fetch the
+  schema before retrying — the resource may have changed
 
 ## Common Examples
 
@@ -103,7 +142,16 @@ npx zapier-sdk run-action twilio write sms \
   --inputs '{"to":"+13105551234","body":"Your reminder text"}' --json
 
 # Add a row to Google Sheets
+#
+# Google Sheets uses DYNAMIC field keys — one per column in the target worksheet.
+# Step 1: fetch the schema for this specific worksheet to learn the real field keys.
+npx zapier-sdk get-input-fields-schema google-sheets write add_row \
+  --connection-id <ID> \
+  --inputs '{"spreadsheet":"<SPREADSHEET_ID>","worksheet":"<SHEET_ID>"}' --json
+
+# Step 2: run the action using the field keys returned by the schema above.
+# The keys below ("name", "email") are illustrative — yours will match your column headers.
 npx zapier-sdk run-action google-sheets write add_row \
   --connection-id <ID> \
-  --inputs '{"spreadsheet":"<SPREADSHEET_ID>","worksheet":"<SHEET_ID>","data_0":"Col A","data_1":"Col B"}' --json
+  --inputs '{"spreadsheet":"<SPREADSHEET_ID>","worksheet":"<SHEET_ID>","name":"Ada Lovelace","email":"ada@example.com"}' --json
 ```
