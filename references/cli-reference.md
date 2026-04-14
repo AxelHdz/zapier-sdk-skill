@@ -42,7 +42,7 @@ npx zapier-sdk get-input-fields-schema <app-key> <action-type> <action-key> --js
 
 # Get dropdown choices for a field (e.g., which calendars exist)
 npx zapier-sdk list-input-field-choices <app-key> <action-type> <action-key> <field-key> \
-  --connection-id <ID> --json
+  --connection <ID> --json
 ```
 
 ### Dynamic fields
@@ -58,12 +58,12 @@ resource the action is targeting. The most common offenders:
 - **CRMs with custom properties** — HubSpot, Salesforce, Pipedrive all expose custom
   fields per account.
 
-For these, pass `--connection-id` and (where applicable) the resource identifier when
+For these, pass `--connection` and (where applicable) the resource identifier when
 fetching the schema so the CLI returns the actual dynamic fields:
 
 ```bash
 npx zapier-sdk get-input-fields-schema google-sheets write add_row \
-  --connection-id <ID> \
+  --connection <ID> \
   --inputs '{"spreadsheet":"<SPREADSHEET_ID>","worksheet":"<SHEET_ID>"}' \
   --json
 ```
@@ -75,7 +75,7 @@ the `--inputs` payload for `run-action`.
 
 ```bash
 npx zapier-sdk run-action <app-key> <action-type> <action-key> \
-  --connection-id <ID> \
+  --connection <ID> \
   --inputs '<JSON string>' \
   --json
 ```
@@ -100,7 +100,7 @@ Before executing a write action, confirm **both** the approval flow and the sche
 
 **Schema:**
 
-- run `get-input-fields-schema` with the target `--connection-id` (and resource identifier
+- run `get-input-fields-schema` with the target `--connection` (and resource identifier
   when relevant) and use the exact `key` values returned by the CLI
 - do not assume field names like `data_0`, `data_1`, `lookup_column`, or `row_id` —
   these vary per app and sometimes per resource
@@ -114,31 +114,31 @@ Before executing a write action, confirm **both** the approval flow and the sche
 ```bash
 # Search Gmail
 npx zapier-sdk run-action gmail search message \
-  --connection-id <ID> --inputs '{"query":"newer_than:1d"}' --json
+  --connection <ID> --inputs '{"query":"newer_than:1d"}' --json
 
 # Search calendar for events on a date
 npx zapier-sdk run-action google-calendar search event \
-  --connection-id <ID> \
+  --connection <ID> \
   --inputs '{"calendarid":"primary","start_min":"2026-06-14T00:00:00Z","start_max":"2026-06-14T23:59:59Z"}' --json
 
 # Create a calendar event
 npx zapier-sdk run-action google-calendar write event \
-  --connection-id <ID> \
+  --connection <ID> \
   --inputs '{"calendarid":"primary","summary":"Event Name","start__dateTime":"2026-06-14T16:00:00-07:00","end__dateTime":"2026-06-14T20:00:00-07:00","location":"123 Main St","description":"Details here"}' --json
 
 # Create a Gmail draft (preferred over sending directly)
 npx zapier-sdk run-action gmail write draft_v2 \
-  --connection-id <ID> \
+  --connection <ID> \
   --inputs '{"to":"client@example.com","subject":"Subject","body":"Body text","body_type":"html"}' --json
 
 # Send an email (ONLY with explicit user approval)
 npx zapier-sdk run-action gmail write send_email \
-  --connection-id <ID> \
+  --connection <ID> \
   --inputs '{"to":"client@example.com","subject":"Subject","body":"Body text","body_type":"html"}' --json
 
 # Send SMS via Twilio
 npx zapier-sdk run-action twilio write sms \
-  --connection-id <ID> \
+  --connection <ID> \
   --inputs '{"to":"+13105551234","body":"Your reminder text"}' --json
 
 # Add a row to Google Sheets
@@ -146,12 +146,12 @@ npx zapier-sdk run-action twilio write sms \
 # Google Sheets uses DYNAMIC field keys — one per column in the target worksheet.
 # Step 1: fetch the schema for this specific worksheet to learn the real field keys.
 npx zapier-sdk get-input-fields-schema google-sheets write add_row \
-  --connection-id <ID> \
+  --connection <ID> \
   --inputs '{"spreadsheet":"<SPREADSHEET_ID>","worksheet":"<SHEET_ID>"}' --json
 
 # Step 2: run the action using the field keys returned by the schema above.
 # The keys below ("name", "email") are illustrative — yours will match your column headers.
 npx zapier-sdk run-action google-sheets write add_row \
-  --connection-id <ID> \
+  --connection <ID> \
   --inputs '{"spreadsheet":"<SPREADSHEET_ID>","worksheet":"<SHEET_ID>","name":"Ada Lovelace","email":"ada@example.com"}' --json
 ```
