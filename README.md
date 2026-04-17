@@ -9,6 +9,8 @@ The repo is designed with two layers:
 
 The included flagship example is **lead routing and follow-up**, but the same framework supports support triage, meeting prep, CRM hygiene, internal notifications, calendar coordination, spreadsheet and document workflows, and other Zapier-connected processes.
 
+The skill also covers **Product Integration Mode** — embedding Zapier inside an application backend (e.g. a Next.js API route) rather than driving it from an interactive agent session. See [references/product-integration-reference.md](references/product-integration-reference.md) and the worked [Next.js form → Sheets example](references/examples/nextjs-form-to-sheets/README.md).
+
 ## What it does
 
 ### Core automation model
@@ -63,6 +65,8 @@ npm run typecheck
 npm test
 ```
 
+`npm run typecheck` covers `src/`, `tests/`, and the `references/examples/nextjs-form-to-sheets/` Product Integration example, so changes to canonical SDK field names (`app`, `action`, `connection`) are caught across all three.
+
 Run the synthetic demo workflows:
 
 ```bash
@@ -85,7 +89,10 @@ src/
 tests/                                # Framework and example coverage
 fixtures/                             # Synthetic workflow inputs
 docs/                                 # Architecture, transcripts, run summaries, example workflows
-references/                           # CLI and SDK usage reference material
+references/                           # CLI, SDK, Product Integration, and provider-lookup references
+  examples/
+    gmail-to-sheets.ts                # Minimal SDK automation example
+    nextjs-form-to-sheets/            # Full Next.js Product Integration example (adapter + route handlers)
 ```
 
 ## Public interfaces
@@ -119,6 +126,9 @@ The skill is intentionally conservative:
 - [Support triage completed run](docs/run-summaries/support-triage-completed.md)
 - [SDK automation reference](references/sdk-automation-reference.md)
 - [CLI reference](references/cli-reference.md)
+- [Product Integration reference](references/product-integration-reference.md)
+- [Provider lookup guide](references/provider-lookup.md) (Calendar, Airtable, CRMs, direct providers)
+- [Next.js form → Sheets example](references/examples/nextjs-form-to-sheets/README.md)
 
 ## Requirements
 
